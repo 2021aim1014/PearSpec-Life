@@ -40,11 +40,33 @@ def normalize_hsi(hsi):
     hsi_max = hsi.max(axis=(0, 1), keepdims=True)
     return (hsi - hsi_min) / (hsi_max - hsi_min)
 
+def random_horizontal_flip(img, p=0.5):
+    if np.random.rand() < p:
+        return np.flip(img, axis=1).copy()
+    return img
+
+def random_vertical_flip(img, p=0.5):
+    if np.random.rand() < p:
+        return np.flip(img, axis=0).copy()
+    return img
+
+def random_rotation(img):
+    k = np.random.choice([0, 1, 2, 3])
+    return np.rot90(img, k, axes=(0, 1)).copy()
+
+def random_brightness(img, max_change=0.2):
+    if img.ndim == 3 and img.shape[2] == 3:
+        factor = 1 + np.random.uniform(-max_change, max_change)
+        img = np.clip(img * factor, 0, 1)
+    return img
+
+
 class PearDecayDataset(Dataset):
-    def __init__(self, root_dir, data_type='RGB'):
+    def __init__(self, root_dir, data_type='RGB', augment=False):
         self.root_dir = root_dir
-        self.data_pairs = []
         self.data_type = data_type
+        self.augment = augment
+        self.data_pairs = []
 
         print(f"📂 Scanning dataset in {root_dir}...")
         pear_names = [name for name in os.listdir(root_dir) if not name.startswith('.')]
@@ -83,6 +105,11 @@ class PearDecayDataset(Dataset):
             rgb_img = cv2.imread(sample[0])
             rgb_img = cv2.cvtColor(rgb_img, cv2.COLOR_BGR2RGB)
             rgb_img = zero_pad_to_size(rgb_img, target_size=(224, 224))
+            if self.augment:
+                rgb_img = random_horizontal_flip(rgb_img)
+                rgb_img = random_vertical_flip(rgb_img)
+                rgb_img = random_rotation(rgb_img)
+                rgb_img = random_brightness(rgb_img)
             rgb_img = normalize_rgb(rgb_img)
             rgb_img = torch.from_numpy(rgb_img).permute(2, 0, 1)  # [3, H, W]
             return rgb_img, temperature, days_left
@@ -90,6 +117,10 @@ class PearDecayDataset(Dataset):
             hsi = np.load(sample["hsi_path"])
             hsi = np.rot90(hsi, k=3, axes=(0, 1))
             hsi = zero_pad_to_size(hsi)
+            if self.augment:
+                hsi = random_horizontal_flip(hsi)
+                hsi = random_vertical_flip(hsi)
+                hsi = random_rotation(hsi)
             hsi = normalize_hsi(hsi)
             hsi = torch.from_numpy(hsi).permute(2, 0, 1)  # [204, H, W]
             return hsi, temperature, days_left
