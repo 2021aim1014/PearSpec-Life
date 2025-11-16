@@ -19,9 +19,19 @@ def zero_pad_to_size(img, target_size=(224, 224)):
     else:              # Grey Scale
         return np.pad(img, ((pad_top, pad_bottom), (pad_left, pad_right)), mode='constant')
 
+# def normalize_rgb(img):
+#     """Normalize RGB image to [0, 1]."""
+#     return img.astype(np.float32) / 255.0
+
 def normalize_rgb(img):
-    """Normalize RGB image to [0, 1]."""
-    return img.astype(np.float32) / 255.0
+    """Normalize RGB image using ImageNet mean/std."""
+    img = img.astype(np.float32) / 255.0
+
+    mean = np.array([0.485, 0.456, 0.406], dtype=np.float32)
+    std  = np.array([0.229, 0.224, 0.225], dtype=np.float32)
+
+    return (img - mean) / std
+
 
 def normalize_hsi(hsi):
     """Normalize HSI cube channel-wise to [0, 1]."""
