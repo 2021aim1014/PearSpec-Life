@@ -72,6 +72,43 @@ class PearDecayDataset(Dataset):
     def __len__(self):
         return len(self.data_pairs)
 
+    class MyDataset(torch.utils.data.Dataset):
+    def __init__(self, data_pairs, train=True):
+        self.data_pairs = data_pairs
+        self.train = train
+
+        self.train_aug = transforms.Compose([
+            transforms.ToPILImage(),
+            transforms.RandomResizedCrop(224),
+            transforms.RandomHorizontalFlip(),
+            transforms.ColorJitter(0.2, 0.2, 0.2, 0.02),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                 std=[0.229, 0.224, 0.225])
+        ])
+
+        self.eval_aug = transforms.Compose([
+            transforms.ToPILImage(),
+            transforms.Resize((224, 224)),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                 std=[0.229, 0.224, 0.225])
+        ])
+
+    def __getitem__(self, idx):
+        sample = self.data_pairs[idx]
+        image = sample[0]
+        temperature = torch.tensor(sample[1], dtype=torch.float32)
+        days_left = torch.tensor(sample[2], dtype=torch.float32)
+
+        if self.train:
+            image = self.train_aug(image)
+        else:
+            image = self.eval_aug(image)
+
+        return image, temperature, days_left
+
+
     def __getitem__(self, idx):
         sample = self.data_pairs[idx]
         temperature = torch.tensor(sample[1], dtype=torch.float32)
